@@ -1,0 +1,7 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+
+[sshd]
+enabled = true
+backend = systemd
+banaction = iptables-multiport

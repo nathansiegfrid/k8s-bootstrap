@@ -1,0 +1,11 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+
+PermitRootLogin no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+X11Forwarding no
+AllowTcpForwarding yes
+AllowAgentForwarding no
+AllowUsers {{ ssh_user }}
+MaxAuthTries 1
