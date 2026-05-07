@@ -13,6 +13,7 @@ token: {{ rke2_token }}
 server: https://{{ hostvars[rke2_first_master].wireguard_ip }}:9345
 {% endif %}
 
+{% if rke2_type == 'server' %}
 tls-san:
 {% for host in groups['k8s_master_nodes'] %}
   - {{ host }}
@@ -41,3 +42,4 @@ kube-apiserver-arg:
 
 node-taint:
   - node-role.kubernetes.io/control-plane:NoSchedule
+{% endif %}

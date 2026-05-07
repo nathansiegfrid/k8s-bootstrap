@@ -1,6 +1,6 @@
 ---
-- name: Setup RKE2 master nodes
-  hosts: k8s_master_nodes
+- name: Setup RKE2 nodes
+  hosts: k8s_nodes
   become: true
   vars:
     ansible_user: "{{ ssh_user }}"
@@ -26,6 +26,14 @@
       loop:
         - "{{ rke2_config_dir }}"
         - "{{ rke2_data_dir }}/agent/etc/kubelet.conf.d"
+
+    - name: Create required master node directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0700"
+      when: rke2_type == 'server'
+      loop:
         - "{{ rke2_data_dir }}/server/manifests"
         - /var/log/kubernetes
 
@@ -52,6 +60,7 @@
         owner: root
         group: root
         mode: "0600"
+      when: rke2_type == 'server'
 
     - name: Write Cilium HelmChartConfig
       ansible.builtin.copy:
@@ -60,17 +69,19 @@
         owner: root
         group: root
         mode: "0600"
+      when: rke2_type == 'server'
 
     - name: Install RKE2
       ansible.builtin.shell:
         cmd: curl -sfL https://get.rke2.io | sh -
       environment:
         INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+        INSTALL_RKE2_TYPE: "{{ rke2_type }}"
       args:
         creates: /usr/local/bin/rke2
       when: not ansible_check_mode
 
-    - name: Start RKE2 server on first master node
+    - name: Start RKE2 service on first master node
       ansible.builtin.systemd_service:
         name: rke2-server
         state: started
@@ -78,7 +89,7 @@
         daemon_reload: true
       when: inventory_hostname == rke2_first_master
 
-    - name: Wait for first master node API server
+    - name: Wait for API server on first master node
       ansible.builtin.wait_for:
         host: "{{ wireguard_ip }}"
         port: 6443
@@ -86,29 +97,17 @@
         timeout: 300
       when: inventory_hostname == rke2_first_master
 
-    - name: Wait for first master node Ready status
-      ansible.builtin.command:
-        cmd: >
-          kubectl get node {{ inventory_hostname }} -o
-          jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
-      when:
-        - inventory_hostname == rke2_first_master
-        - not ansible_check_mode
-      register: node_ready
-      delay: 10
-      retries: 30
-      until: node_ready.stdout == "True"
-      changed_when: false
-
-    - name: Start RKE2 server on remaining master nodes
+    - name: Start RKE2 service on remaining master nodes
       ansible.builtin.systemd_service:
         name: rke2-server
         state: started
         enabled: true
         daemon_reload: true
-      when: inventory_hostname != rke2_first_master
+      when:
+        - rke2_type == 'server'
+        - inventory_hostname != rke2_first_master
 
-    - name: Wait for API server
+    - name: Wait for API server on remaining master nodes
       ansible.builtin.wait_for:
         host: "{{ wireguard_ip }}"
         port: 6443
@@ -132,6 +131,7 @@
           kubectl get node {{ inventory_hostname }} -o
           jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
       when: not ansible_check_mode
+      delegate_to: "{{ rke2_first_master if rke2_type == 'agent' else inventory_hostname }}"
       register: node_ready
       delay: 10
       retries: 30
@@ -146,6 +146,7 @@
         owner: root
         group: root
         mode: "0644"
+      when: rke2_type == 'server'
 
     - name: Create user kube directory
       file:
@@ -154,6 +155,7 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: "0700"
+      when: rke2_type == 'server'
 
     - name: Write user kubeconfig file
       ansible.builtin.copy:
@@ -169,6 +171,7 @@
       ansible.builtin.command:
         cmd: kubectl get nodes -o wide
       when: not ansible_check_mode
+      delegate_to: "{{ rke2_first_master }}"
       register: node_status
       changed_when: false
       run_once: true
