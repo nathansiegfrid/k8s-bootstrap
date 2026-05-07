@@ -1,5 +1,6 @@
-# Ansible inventory file
-inventory.ini
+# Inventory files (contains real IPs and sensitive variables)
+inventory/hosts
+
 
 # https://github.com/github/gitignore/blob/main/Global/Ansible.gitignore
 

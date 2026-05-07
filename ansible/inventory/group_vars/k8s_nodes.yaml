@@ -1,0 +1,8 @@
+wireguard_interface: wg0
+wireguard_network: "172.31.0.0/24"
+wireguard_port: 51820
+wireguard_mtu: 1420
+wireguard_persistent_keepalive: 25
+wireguard_key_dir: /etc/wireguard
+
+ntp_server: pool.ntp.org

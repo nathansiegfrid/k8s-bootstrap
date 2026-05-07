@@ -1,0 +1,23 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+
+[Interface]
+Address = {{ wireguard_ip }}/24
+ListenPort = {{ wireguard_port }}
+PrivateKey = {{ wireguard_private_key }}
+MTU = {{ wireguard_mtu }}
+
+PostUp = /usr/sbin/iptables -A FORWARD -i {{ wireguard_interface }} -j ACCEPT; /usr/sbin/iptables -A FORWARD -o {{ wireguard_interface }} -j ACCEPT
+PostDown = /usr/sbin/iptables -D FORWARD -i {{ wireguard_interface }} -j ACCEPT; /usr/sbin/iptables -D FORWARD -o {{ wireguard_interface }} -j ACCEPT
+
+{% for host in groups['k8s_nodes'] %}
+{% if host != inventory_hostname %}
+# {{ host }}
+[Peer]
+PublicKey = {{ hostvars[host].wireguard_public_key }}
+Endpoint = {{ hostvars[host].ansible_host }}:{{ wireguard_port }}
+AllowedIPs = {{ hostvars[host].wireguard_ip }}/32
+PersistentKeepalive = {{ wireguard_persistent_keepalive }}
+
+{% endif %}
+{% endfor %}

@@ -1,0 +1,18 @@
+[k8s_master_nodes]
+k8s-master-01 ansible_host=10.0.1.10 wireguard_ip=172.31.0.1
+k8s-master-02 ansible_host=10.0.1.11 wireguard_ip=172.31.0.2
+k8s-master-03 ansible_host=10.0.1.12 wireguard_ip=172.31.0.3
+
+[k8s_worker_nodes]
+k8s-worker-01 ansible_host=10.0.2.10 wireguard_ip=172.31.0.11
+k8s-worker-02 ansible_host=10.0.2.11 wireguard_ip=172.31.0.12
+k8s-worker-03 ansible_host=10.0.2.12 wireguard_ip=172.31.0.13
+
+[k8s_nodes:children]
+k8s_master_nodes
+k8s_worker_nodes
+
+[k8s_nodes:vars]
+ssh_default_user=root
+ssh_user=non_root_superuser
+ssh_public_key="ssh-ed25519 AAAA..."

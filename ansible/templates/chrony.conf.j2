@@ -1,0 +1,8 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+
+pool {{ ntp_server }} iburst maxsources 4
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony

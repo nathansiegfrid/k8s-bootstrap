@@ -1,0 +1,130 @@
+---
+# Prepare the OS for running Kubernetes.
+# Install dependencies, load kernel modules, disable swap, etc.
+
+- name: Prepare nodes for Kubernetes
+  hosts: k8s_nodes
+  become: true
+  vars:
+    ansible_user: "{{ ssh_user }}"
+
+  tasks:
+    - name: Set system hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    - name: Install cluster dependencies
+      ansible.builtin.apt:
+        name:
+          - apparmor
+          - apparmor-utils
+          - chrony # NTP time sync
+          - nfs-common # NFS-based volumes
+          - open-iscsi # Longhorn
+        state: present
+        update_cache: true
+
+    - name: Enable and start cluster dependencies
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - chrony
+        - iscsid
+
+    # Kubernetes needs swap off. The kubelet will refuse to start otherwise.
+    - name: Disable swap for current session
+      ansible.builtin.command: swapoff -a
+      when:
+        - ansible_swaptotal_mb > 0
+        - not ansible_check_mode
+
+    - name: Disable swap permanently (survives reboots)
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: "^(\\s*)([^#\\n]+\\s+)(\\w+\\s+)swap(\\s+.*)$"
+        replace: "#\\1\\2\\3swap\\4"
+        backup: true
+
+    - name: Load required kernel modules
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - br_netfilter
+        - ip6table_filter
+        - iptable_filter
+        - iptable_mangle
+        - iptable_nat
+        - nf_conntrack
+        - overlay
+
+    - name: Persist kernel modules across reboots
+      ansible.builtin.copy:
+        content: |
+          br_netfilter
+          ip6table_filter
+          iptable_filter
+          iptable_mangle
+          iptable_nat
+          nf_conntrack
+          overlay
+        dest: /etc/modules-load.d/kubernetes.conf
+        mode: "0644"
+
+    - name: Apply sysctl parameters for RKE2
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+        state: present
+        reload: true
+      loop:
+        - { key: "fs.inotify.max_user_instances", value: "8192" } # prevents "too many open files" for config watchers
+        - { key: "fs.inotify.max_user_watches", value: "524288" } # prevents "too many open files" for config watchers
+        - { key: "kernel.pid_max", value: "4194304" }
+        - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
+        - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+        - { key: "net.bridge.bridge-nf-call-arptables", value: "1" }
+        - { key: "net.ipv4.ip_forward", value: "1" }
+        - { key: "net.ipv6.conf.all.forwarding", value: "1" }
+        - { key: "net.netfilter.nf_conntrack_max", value: "1000000" }
+        - { key: "vm.swappiness", value: "0" }
+
+    - name: Configure chrony (NTP)
+      ansible.builtin.template:
+        src: chrony.conf.j2
+        dest: /etc/chrony/chrony.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart chrony
+
+    - name: Add node public IPs to /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: ".*\\s+{{ item }}$"
+        line: "{{ hostvars[item].ansible_host }} {{ item }}"
+        state: present
+      loop: "{{ groups['k8s_nodes'] }}"
+
+    - name: Add node WireGuard IPs to /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: ".*\\s+{{ item }}-wg$"
+        line: "{{ hostvars[item].wireguard_ip }} {{ item }}-wg"
+        state: present
+      loop: "{{ groups['k8s_nodes'] }}"
+      when: hostvars[item].wireguard_ip is defined
+
+  handlers:
+    - name: Restart chrony
+      ansible.builtin.systemd_service:
+        name: chrony
+        state: restarted
