@@ -1,0 +1,17 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+#
+# Reserve CPU and RAM for Kubernetes components so workloads don't starve the node.
+
+apiVersion: kubelet.config.k8s.io/v1
+kind: KubeletConfiguration
+maxPods: 110
+kubeReserved:
+  cpu: "500m"
+  memory: "1Gi"
+systemReserved:
+  cpu: "500m"
+  memory: "500Mi"
+evictionHard:
+  memory.available: "500Mi"
+  nodefs.available: "10%"

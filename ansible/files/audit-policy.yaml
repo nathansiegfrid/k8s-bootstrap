@@ -1,0 +1,30 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+#
+# Define how the cluster logs API activity:
+# 1-2. Ignore high-volume read operations.
+# 3. Log access to Secrets/ConfigMaps, but omit the sensitive data itself.
+# 4. Log full data for all state-changing actions (create/update/delete).
+# 5. Log metadata for cases not covered above.
+# Omits the 'RequestReceived' stage to prevent duplicate log entries for every call.
+
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: None
+    verbs: [ "get", "list", "watch" ]
+    resources:
+      - group: ""
+        resources: [ "events", "endpoints", "services" ]
+  - level: None
+    nonResourceURLs: [ "/healthz*", "/readyz*", "/livez*", "/metrics" ]
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: [ "secrets", "configmaps" ]
+    omitStages: [ RequestReceived ]
+  - level: RequestResponse
+    verbs: [ "create", "update", "delete", "patch" ]
+    omitStages: [ RequestReceived ]
+  - level: Metadata
+    omitStages: [ RequestReceived ]

@@ -1,0 +1,43 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+#
+# https://docs.rke2.io/install/configuration
+
+node-name: {{ inventory_hostname }}
+node-ip: {{ wireguard_ip }}
+node-external-ip: {{ ansible_host }}
+
+token: {{ rke2_token }}
+
+{% if inventory_hostname != rke2_first_master %}
+server: https://{{ hostvars[rke2_first_master].wireguard_ip }}:9345
+{% endif %}
+
+tls-san:
+{% for host in groups['k8s_master_nodes'] %}
+  - {{ host }}
+  - {{ hostvars[host].ansible_host }}
+  - {{ hostvars[host].wireguard_ip }}
+{% endfor %}
+
+cni: {{ rke2_cni }}
+cluster-cidr: {{ rke2_cluster_cidr }}
+service-cidr: {{ rke2_service_cidr }}
+cluster-dns: {{ rke2_cluster_dns }}
+
+disable:
+  - rke2-ingress-nginx
+
+write-kubeconfig-mode: "0600"
+
+kube-apiserver-arg:
+  - anonymous-auth=false
+  - audit-log-path=/var/log/kubernetes/audit.log
+  - audit-log-maxage=30
+  - audit-log-maxbackup=10
+  - audit-log-maxsize=100
+  - audit-policy-file={{ rke2_config_dir }}/audit-policy.yaml
+  - tls-min-version=VersionTLS12
+
+node-taint:
+  - node-role.kubernetes.io/control-plane:NoSchedule

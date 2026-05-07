@@ -16,3 +16,4 @@ k8s_worker_nodes
 ssh_default_user=root
 ssh_user=non_root_superuser
 ssh_public_key="ssh-ed25519 AAAA..."
+k8s_bootstrap_token="very_secure_random_string"
