@@ -1,0 +1,141 @@
+---
+- name: Update RKE2 with rolling restart
+  hosts: k8s_nodes
+  become: true
+  serial: 1
+  vars:
+    ansible_user: "{{ ssh_user }}"
+    reboot_required: false
+
+  environment:
+    PATH: "{{ rke2_bin_dir }}:{{ ansible_env.PATH }}"
+    KUBECONFIG: "{{ rke2_kubeconfig }}"
+
+  tasks:
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    - name: Check if OS reports reboot required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+      changed_when: reboot_required_file.stat.exists
+      notify: Reboot required
+
+    - name: Write RKE2 config
+      ansible.builtin.template:
+        src: rke2-config.yaml.j2
+        dest: "{{ rke2_config_dir }}/config.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Reboot required
+
+    - name: Write kubelet configuration drop-in
+      ansible.builtin.copy:
+        src: kubelet-config.yaml
+        dest: "{{ rke2_data_dir }}/agent/etc/kubelet.conf.d/99-custom.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Reboot required
+
+    - name: Write audit policy on master nodes
+      ansible.builtin.copy:
+        src: audit-policy.yaml
+        dest: "{{ rke2_config_dir }}/audit-policy.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
+      notify: Reboot required
+
+    - name: Get current RKE2 version
+      ansible.builtin.shell: |
+        set -euo pipefail
+
+        if systemctl is-active --quiet rke2-{{ rke2_type }} && rke2_service_pid=$(systemctl show rke2-{{ rke2_type }} --property MainPID --value); then
+          rke2_bin_path="$(realpath "/proc/$rke2_service_pid/exe")"
+        fi
+
+        if [[ -f "${rke2_bin_path:=}" ]]; then
+          current_version="$($rke2_bin_path --version | grep -E "rke2 version" | awk '{print $3}')"
+        else
+          current_version="none"
+        fi
+
+        echo "$current_version"
+      args:
+        executable: /bin/bash
+      register: get_current_version
+      changed_when: false
+
+    - name: Display current RKE2 version
+      ansible.builtin.debug:
+        msg: "{{ get_current_version.stdout }}"
+
+    - name: Update RKE2
+      when: get_current_version.stdout != rke2_version
+      notify: Reboot required
+      block:
+        - name: Download RKE2 install script
+          ansible.builtin.get_url:
+            url: https://get.rke2.io
+            dest: /var/tmp/rke2.sh
+            mode: "0700"
+        - name: Run RKE2 install script
+          ansible.builtin.command:
+            cmd: /var/tmp/rke2.sh
+          environment:
+            INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+            INSTALL_RKE2_TYPE: "{{ rke2_type }}"
+          when: not ansible_check_mode
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    - name: Maintenance
+      when: reboot_required
+      block:
+        - name: Drain node
+          ansible.builtin.command:
+            cmd: "kubectl drain {{ inventory_hostname }} --ignore-daemonsets
+              --delete-emptydir-data --force"
+          delegate_to: "{{ rke2_first_master }}"
+          when: not ansible_check_mode
+          register: drain_result
+          delay: 10
+          retries: 3
+          until: drain_result.rc == 0
+          failed_when: false
+
+        - name: Reboot
+          ansible.builtin.reboot:
+            reboot_timeout: 600
+
+        - name: Wait for Ready status
+          ansible.builtin.command:
+            cmd: >
+              kubectl get node {{ inventory_hostname }} -o
+              jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+          delegate_to: "{{ rke2_first_master }}"
+          when: not ansible_check_mode
+          register: node_ready
+          until: node_ready.stdout == "True"
+          retries: 40
+          delay: 15
+          changed_when: false
+
+        - name: Uncordon node
+          ansible.builtin.command:
+            cmd: "kubectl uncordon {{ inventory_hostname }}"
+          delegate_to: "{{ rke2_first_master }}"
+          when: not ansible_check_mode
+          changed_when: true
+
+  handlers:
+    - name: Reboot required
+      ansible.builtin.set_fact:
+        reboot_required: true
