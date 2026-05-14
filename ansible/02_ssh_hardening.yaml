@@ -18,6 +18,7 @@
           - python3-systemd
           - fail2ban
         state: present
+        update_cache: true
 
     - name: Write Fail2Ban SSH jail config
       ansible.builtin.copy:
