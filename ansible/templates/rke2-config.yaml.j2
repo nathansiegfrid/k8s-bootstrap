@@ -3,6 +3,8 @@
 #
 # https://docs.rke2.io/install/configuration
 
+profile: cis
+
 node-name: {{ inventory_hostname }}
 node-ip: {{ wireguard_ip }}
 node-external-ip: {{ ansible_host }}
@@ -32,13 +34,22 @@ disable:
 write-kubeconfig-mode: "0600"
 
 kube-apiserver-arg:
+  # Auth
   - anonymous-auth=false
+  - service-account-extend-token-expiration=false
+
+  # TLS
+  - tls-min-version=VersionTLS12
+
+  # Admission Control
+  - admission-control-config-file={{ rke2_config_dir }}/rke2-psa-config.yaml
+
+  # Audit Logging
+  - audit-policy-file={{ rke2_config_dir }}/audit-policy.yaml
   - audit-log-path=/var/log/kubernetes/audit.log
   - audit-log-maxage=30
   - audit-log-maxbackup=10
   - audit-log-maxsize=100
-  - audit-policy-file={{ rke2_config_dir }}/audit-policy.yaml
-  - tls-min-version=VersionTLS12
 
 node-taint:
   - node-role.kubernetes.io/control-plane:NoSchedule

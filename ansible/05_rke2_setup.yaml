@@ -62,6 +62,15 @@
         mode: "0600"
       when: rke2_type == 'server'
 
+    - name: Write PSA config
+      ansible.builtin.copy:
+        src: rke2-psa-config.yaml
+        dest: "{{ rke2_config_dir }}/rke2-psa-config.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
+
     - name: Write Cilium HelmChartConfig
       ansible.builtin.copy:
         src: rke2-cilium-config.yaml
@@ -80,6 +89,35 @@
       args:
         creates: /usr/local/bin/rke2
       when: not ansible_check_mode
+
+    # Host requirements for CIS hardening
+    # https://docs.rke2.io/security/hardening_guide
+
+    - name: Create system user for etcd
+      ansible.builtin.user:
+        name: etcd
+        shell: /sbin/nologin
+        create_home: no
+        system: yes
+      when:
+        - rke2_type == 'server'
+
+    - name: Copy RKE2 CIS sysctl config file
+      ansible.builtin.copy:
+        remote_src: true
+        src: /usr/local/share/rke2/rke2-cis-sysctl.conf
+        dest: /etc/sysctl.d/60-rke2-cis.conf
+        owner: root
+        group: root
+        mode: "0644"
+      register: sysctl_config
+
+    - name: Restart systemd-sysctl
+      ansible.builtin.systemd_service:
+        name: systemd-sysctl
+        state: restarted
+      when:
+        - sysctl_config is changed
 
     - name: Start RKE2 service on first master node
       ansible.builtin.systemd_service:

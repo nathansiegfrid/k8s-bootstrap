@@ -42,10 +42,20 @@
         mode: "0600"
       notify: Reboot required
 
-    - name: Write audit policy on master nodes
+    - name: Write audit policy
       ansible.builtin.copy:
         src: audit-policy.yaml
         dest: "{{ rke2_config_dir }}/audit-policy.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
+      notify: Reboot required
+
+    - name: Write PSA config
+      ansible.builtin.copy:
+        src: rke2-psa-config.yaml
+        dest: "{{ rke2_config_dir }}/rke2-psa-config.yaml"
         owner: root
         group: root
         mode: "0600"
