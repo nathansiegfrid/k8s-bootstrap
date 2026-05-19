@@ -56,15 +56,21 @@
         path: "{{ wireguard_dir }}/private.key"
         mode: "0600"
 
+    - name: Check if public key already exists
+      ansible.builtin.stat:
+        path: "{{ wireguard_dir }}/public.key"
+      register: wg_public_key_file
+
     - name: Generate WireGuard public key
       ansible.builtin.shell:
         cmd: "wg pubkey < {{ wireguard_dir }}/private.key > {{ wireguard_dir }}/public.key"
-      args:
-        creates: "{{ wireguard_dir }}/public.key"
+      when:
+        - not wg_public_key_file.stat.exists
+        - not ansible_check_mode
 
     - name: Read private key
       ansible.builtin.slurp:
-        src: "{{ wireguard_key_dir }}/private.key"
+        src: "{{ wireguard_dir }}/private.key"
       register: wg_private_key
 
     - name: Read public key
@@ -77,13 +83,6 @@
         wireguard_private_key: "{{ wg_private_key.content | b64decode | trim }}"
         wireguard_public_key: "{{ wg_public_key.content | b64decode | trim }}"
 
-    - name: Stop existing WireGuard interface
-      ansible.builtin.command:
-        cmd: "wg-quick down {{ wireguard_interface }}"
-      when: not ansible_check_mode
-      failed_when: false
-      changed_when: false
-
     - name: Write WireGuard interface config
       ansible.builtin.template:
         src: wireguard.conf.j2
@@ -91,20 +90,31 @@
         owner: root
         group: root
         mode: "0600"
+      notify: Restart WireGuard
 
     - name: Enable and start WireGuard interface
       ansible.builtin.systemd_service:
         name: "wg-quick@{{ wireguard_interface }}"
-        state: restarted
+        state: started
         enabled: true
         daemon_reload: true
+
+    - name: Flush handlers to ensure WireGuard is up before verifying
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for WireGuard interface to be ready
+      ansible.builtin.command:
+        cmd: "wg show {{ wireguard_interface }}"
+      register: wg_check
+      until: wg_check.rc == 0
+      retries: 5
+      delay: 3
+      changed_when: false
 
     - name: Show WireGuard status
       ansible.builtin.command:
         cmd: "wg show {{ wireguard_interface }}"
       register: wg_status
-      delay: 5
-      retries: 3
       changed_when: false
 
     - name: Print WireGuard status
@@ -116,6 +126,7 @@
         cmd: "ping -c 3 -W 5 {{ hostvars[item].wireguard_ip }}"
       loop: "{{ groups['k8s_nodes'] | difference([inventory_hostname]) }}"
       register: ping_results
+      failed_when: ping_results.rc != 0
       changed_when: false
 
     - name: Print peer connectivity results
@@ -124,3 +135,10 @@
       loop: "{{ ping_results.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+  handlers:
+    - name: Restart WireGuard
+      ansible.builtin.systemd_service:
+        name: "wg-quick@{{ wireguard_interface }}"
+        state: restarted
+        daemon_reload: true
