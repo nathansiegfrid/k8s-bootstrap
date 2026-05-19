@@ -21,3 +21,10 @@ PersistentKeepalive = {{ wireguard_persistent_keepalive }}
 
 {% endif %}
 {% endfor %}
+{% for peer in wireguard_extra_peers | default([]) %}
+# {{ peer.name }}
+[Peer]
+PublicKey = {{ peer.public_key }}
+AllowedIPs = {{ peer.allowed_ips }}
+
+{% endfor %}
