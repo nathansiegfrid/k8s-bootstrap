@@ -33,35 +33,34 @@
 
     - name: Create WireGuard config directory
       ansible.builtin.file:
-        path: "{{ wireguard_key_dir }}"
+        path: "{{ wireguard_dir }}"
         state: directory
         mode: "0700"
 
     - name: Check if private key already exists
       ansible.builtin.stat:
-        path: "{{ wireguard_key_dir }}/private.key"
+        path: "{{ wireguard_dir }}/private.key"
       register: wg_private_key_file
 
     - name: Generate WireGuard private key
       ansible.builtin.shell:
-        cmd: "wg genkey > {{ wireguard_key_dir }}/private.key"
+        cmd: "wg genkey > {{ wireguard_dir }}/private.key"
       args:
-        creates: "{{ wireguard_key_dir }}/private.key"
+        creates: "{{ wireguard_dir }}/private.key"
       when:
         - not wg_private_key_file.stat.exists
         - not ansible_check_mode
 
     - name: Set private key file permissions
       ansible.builtin.file:
-        path: "{{ wireguard_key_dir }}/private.key"
+        path: "{{ wireguard_dir }}/private.key"
         mode: "0600"
 
     - name: Generate WireGuard public key
       ansible.builtin.shell:
-        cmd: "wg pubkey < {{ wireguard_key_dir }}/private.key > {{ wireguard_key_dir }}/public.key"
+        cmd: "wg pubkey < {{ wireguard_dir }}/private.key > {{ wireguard_dir }}/public.key"
       args:
-        creates: "{{ wireguard_key_dir }}/public.key"
-      when: not ansible_check_mode
+        creates: "{{ wireguard_dir }}/public.key"
 
     - name: Read private key
       ansible.builtin.slurp:
@@ -70,7 +69,7 @@
 
     - name: Read public key
       ansible.builtin.slurp:
-        src: "{{ wireguard_key_dir }}/public.key"
+        src: "{{ wireguard_dir }}/public.key"
       register: wg_public_key
 
     - name: Store keys as host facts
@@ -88,7 +87,7 @@
     - name: Write WireGuard interface config
       ansible.builtin.template:
         src: wireguard.conf.j2
-        dest: "{{ wireguard_key_dir }}/{{ wireguard_interface }}.conf"
+        dest: "{{ wireguard_dir }}/{{ wireguard_interface }}.conf"
         owner: root
         group: root
         mode: "0600"
