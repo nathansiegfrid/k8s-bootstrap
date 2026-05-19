@@ -13,3 +13,5 @@ spec:
     encryption:
       enabled: true
       type: wireguard
+    hostFirewall:
+      enabled: true

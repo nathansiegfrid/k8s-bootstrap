@@ -4,6 +4,7 @@
   gather_facts: false
   become: true
   vars:
+    ansible_host: "{{ wireguard_ip }}"
     ansible_user: "{{ ssh_user }}"
 
   tasks:

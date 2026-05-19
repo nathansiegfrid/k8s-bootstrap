@@ -1,0 +1,92 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+#
+# Required RKE2 ports
+# https://docs.rke2.io/install/requirements#inbound-network-rules
+
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: rke2-host-firewall
+spec:
+  nodeSelector:
+    matchLabels: {}
+  ingress:
+    - icmps:
+        - fields:
+            - type: EchoRequest
+              family: IPv4
+    - toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+            - port: "51820" # WireGuard
+              protocol: UDP
+
+    # Allow SSH on WireGuard network
+    - fromCIDR:
+        - {{ wireguard_network }}
+      toPorts:
+        - ports:
+            - port: "22"
+              protocol: TCP
+
+    # Allow RKE2 ports within cluster
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "4240" # Cilium CNI health checks
+              protocol: TCP
+            - port: "8472" # Cilium CNI with VXLAN
+              protocol: UDP
+            - port: "51871" # Cilium CNI with WireGuard
+              protocol: UDP
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "10250" # kubelet metrics
+              protocol: TCP
+
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: rke2-host-firewall-master
+spec:
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/control-plane: "true"
+  ingress:
+    # Allow RKE2 ports on WireGuard network
+    - fromCIDR:
+        - {{ wireguard_network }}
+      toPorts:
+        - ports:
+            - port: "6443" # Kubernetes API
+              protocol: TCP
+            - port: "9345" # RKE2 supervisor API
+              protocol: TCP
+            - port: "2379" # etcd client port
+              protocol: TCP
+            - port: "2380" # etcd peer port
+              protocol: TCP
+
+    # Allow RKE2 ports within cluster
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "6443" # Kubernetes API
+              protocol: TCP
+            - port: "9345" # RKE2 supervisor API
+              protocol: TCP
+            - port: "2379" # etcd client port
+              protocol: TCP
+            - port: "2380" # etcd peer port
+              protocol: TCP

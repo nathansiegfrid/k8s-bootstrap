@@ -4,6 +4,7 @@
   become: true
   serial: 1
   vars:
+    ansible_host: "{{ wireguard_ip }}"
     ansible_user: "{{ ssh_user }}"
     reboot_required: false
 
@@ -33,7 +34,7 @@
         mode: "0600"
       notify: Reboot required
 
-    - name: Write kubelet configuration drop-in
+    - name: Write kubelet drop-in config
       ansible.builtin.copy:
         src: kubelet-config.yaml
         dest: "{{ rke2_data_dir }}/agent/etc/kubelet.conf.d/99-custom.yaml"
@@ -61,6 +62,25 @@
         mode: "0600"
       when: rke2_type == 'server'
       notify: Reboot required
+
+    - name: Write Cilium HelmChartConfig
+      ansible.builtin.copy:
+        src: rke2-cilium-config.yaml
+        dest: "{{ rke2_data_dir }}/server/manifests/rke2-cilium-config.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
+      notify: Reboot required
+
+    - name: Write Cilium host firewall config
+      ansible.builtin.template:
+        src: rke2-host-firewall.yaml.j2
+        dest: "{{ rke2_data_dir }}/server/manifests/rke2-host-firewall.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
 
     - name: Get current RKE2 version
       ansible.builtin.shell: |
@@ -111,8 +131,7 @@
       block:
         - name: Drain node
           ansible.builtin.command:
-            cmd: "kubectl drain {{ inventory_hostname }} --ignore-daemonsets
-              --delete-emptydir-data --force"
+            cmd: kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-emptydir-data --force
           delegate_to: "{{ rke2_first_master }}"
           when: not ansible_check_mode
           register: drain_result
@@ -127,9 +146,7 @@
 
         - name: Wait for Ready status
           ansible.builtin.command:
-            cmd: >
-              kubectl get node {{ inventory_hostname }} -o
-              jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+            cmd: kubectl get node {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
           delegate_to: "{{ rke2_first_master }}"
           when: not ansible_check_mode
           register: node_ready

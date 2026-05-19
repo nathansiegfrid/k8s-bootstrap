@@ -3,6 +3,7 @@
   hosts: k8s_nodes
   become: true
   vars:
+    ansible_host: "{{ wireguard_ip }}"
     ansible_user: "{{ ssh_user }}"
 
   environment:
@@ -75,6 +76,15 @@
       ansible.builtin.copy:
         src: rke2-cilium-config.yaml
         dest: "{{ rke2_data_dir }}/server/manifests/rke2-cilium-config.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: rke2_type == 'server'
+
+    - name: Write Cilium host firewall config
+      ansible.builtin.template:
+        src: rke2-host-firewall.yaml.j2
+        dest: "{{ rke2_data_dir }}/server/manifests/rke2-host-firewall.yaml"
         owner: root
         group: root
         mode: "0600"
@@ -165,9 +175,7 @@
 
     - name: Wait for Ready status
       ansible.builtin.command:
-        cmd: >
-          kubectl get node {{ inventory_hostname }} -o
-          jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+        cmd: kubectl get node {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
       when: not ansible_check_mode
       delegate_to: "{{ rke2_first_master if rke2_type == 'agent' else inventory_hostname }}"
       register: node_ready
