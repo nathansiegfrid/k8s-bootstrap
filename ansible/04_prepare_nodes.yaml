@@ -6,6 +6,7 @@
   hosts: k8s_nodes
   become: true
   vars:
+    ansible_host: "{{ wireguard_ip }}"
     ansible_user: "{{ ssh_user }}"
 
   tasks:
