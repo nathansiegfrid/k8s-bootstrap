@@ -6,9 +6,31 @@
 
 - name: Deploy WireGuard mesh VPN
   hosts: k8s_nodes
+  gather_facts: false
   become: true
   vars:
+    ansible_host: "{{ public_ip }}"
     ansible_user: "{{ ssh_user }}"
+
+  pre_tasks:
+    - name: Check if WireGuard IP is reachable
+      ansible.builtin.wait_for:
+        host: "{{ wireguard_ip }}"
+        port: 22
+        timeout: 3
+      delegate_to: localhost
+      become: false
+      register: wg_reachable
+      failed_when: false
+
+    - name: Prefer WireGuard IP when reachable
+      ansible.builtin.set_fact:
+        ansible_host: "{{ wireguard_ip }}"
+      when: wg_reachable.state is defined and wg_reachable.state == "started"
+
+    - name: Show selected connection target
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: ({{ ansible_host }})"
 
   tasks:
     - name: Install WireGuard

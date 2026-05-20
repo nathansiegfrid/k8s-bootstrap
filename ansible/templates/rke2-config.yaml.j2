@@ -7,7 +7,7 @@ profile: cis
 
 node-name: {{ inventory_hostname }}
 node-ip: {{ wireguard_ip }}
-node-external-ip: {{ ansible_host }}
+node-external-ip: {{ public_ip }}
 
 token: {{ rke2_token }}
 
@@ -19,7 +19,7 @@ server: https://{{ hostvars[rke2_first_master].wireguard_ip }}:9345
 tls-san:
 {% for host in groups['k8s_master_nodes'] %}
   - {{ host }}
-  - {{ hostvars[host].ansible_host }}
+  - {{ hostvars[host].public_ip }}
   - {{ hostvars[host].wireguard_ip }}
 {% endfor %}
 
