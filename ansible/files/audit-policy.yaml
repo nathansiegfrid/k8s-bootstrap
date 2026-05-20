@@ -12,19 +12,19 @@ apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: None
-    verbs: [ "get", "list", "watch" ]
+    verbs: ["get", "list", "watch"]
     resources:
       - group: ""
-        resources: [ "events", "endpoints", "services" ]
+        resources: ["events", "endpoints", "services"]
   - level: None
-    nonResourceURLs: [ "/healthz*", "/readyz*", "/livez*", "/metrics" ]
+    nonResourceURLs: ["/healthz*", "/readyz*", "/livez*", "/metrics"]
   - level: Metadata
     resources:
       - group: ""
-        resources: [ "secrets", "configmaps" ]
-    omitStages: [ RequestReceived ]
+        resources: ["secrets", "configmaps"]
+    omitStages: [RequestReceived]
   - level: RequestResponse
-    verbs: [ "create", "update", "delete", "patch" ]
-    omitStages: [ RequestReceived ]
+    verbs: ["create", "update", "delete", "patch"]
+    omitStages: [RequestReceived]
   - level: Metadata
-    omitStages: [ RequestReceived ]
+    omitStages: [RequestReceived]

@@ -10,7 +10,8 @@
   tasks:
     - name: Confirm cluster destruction
       ansible.builtin.pause:
-        prompt: "DANGER: This will PERMANENTLY DESTROY the cluster on all nodes. Type
+        prompt:
+          "DANGER: This will PERMANENTLY DESTROY the cluster on all nodes. Type
           'destroy-cluster' to proceed"
       register: confirmation
       run_once: true
