@@ -34,9 +34,10 @@ spec:
               protocol: TCP
 
     # Allow RKE2 ports within cluster
-    - fromCIDR:
-        - 127.0.0.1/32
-        - {{ wireguard_network }}
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
       toPorts:
         - ports:
             - port: "10250" # kubelet metrics
@@ -60,8 +61,23 @@ spec:
   ingress:
     # Allow RKE2 ports on WireGuard network
     - fromCIDR:
-        - 127.0.0.1/32
         - {{ wireguard_network }}
+      toPorts:
+        - ports:
+            - port: "6443" # Kubernetes API
+              protocol: TCP
+            - port: "9345" # RKE2 supervisor API
+              protocol: TCP
+            - port: "2379" # etcd client port
+              protocol: TCP
+            - port: "2380" # etcd peer port
+              protocol: TCP
+
+    # Allow RKE2 ports within cluster
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
       toPorts:
         - ports:
             - port: "6443" # Kubernetes API
