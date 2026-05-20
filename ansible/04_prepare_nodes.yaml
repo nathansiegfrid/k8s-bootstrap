@@ -90,12 +90,6 @@
         - { key: "fs.inotify.max_user_instances", value: "8192" } # prevents "too many open files" for config watchers
         - { key: "fs.inotify.max_user_watches", value: "524288" } # prevents "too many open files" for config watchers
         - { key: "kernel.pid_max", value: "4194304" }
-        - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
-        - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
-        - { key: "net.bridge.bridge-nf-call-arptables", value: "1" }
-        - { key: "net.ipv4.ip_forward", value: "1" }
-        - { key: "net.ipv6.conf.all.forwarding", value: "1" }
-        - { key: "net.netfilter.nf_conntrack_max", value: "1000000" }
         - { key: "vm.swappiness", value: "0" }
 
     - name: Configure chrony (NTP)

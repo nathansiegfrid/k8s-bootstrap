@@ -71,7 +71,6 @@
         group: root
         mode: "0600"
       when: rke2_type == 'server'
-      notify: Reboot required
 
     - name: Write Cilium host firewall config
       ansible.builtin.template:
@@ -104,7 +103,7 @@
 
     - name: Display current RKE2 version
       ansible.builtin.debug:
-        msg: "{{ get_current_version.stdout }}"
+        msg: "{{ get_current_version.stdout }}{{ ' -> ' + rke2_version if get_current_version.stdout != rke2_version else '' }}"
 
     - name: Update RKE2
       when: get_current_version.stdout != rke2_version
