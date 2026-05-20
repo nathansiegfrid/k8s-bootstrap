@@ -158,6 +158,18 @@
       loop_control:
         label: "{{ item.item }}"
 
+    - name: Generate client configs
+      ansible.builtin.template:
+        src: wireguard-client.conf.j2
+        dest: "./generate/{{ item.name }}.conf"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      loop: "{{ wireguard_extra_peers | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+
   handlers:
     - name: Restart WireGuard
       ansible.builtin.systemd_service:
