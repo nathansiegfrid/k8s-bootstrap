@@ -112,7 +112,7 @@
         owner: root
         group: root
         mode: "0600"
-      notify: Restart WireGuard
+      register: wg_config
 
     - name: Enable and start WireGuard interface
       ansible.builtin.systemd_service:
@@ -121,8 +121,11 @@
         enabled: true
         daemon_reload: true
 
-    - name: Flush handlers to ensure WireGuard is up before verifying
-      ansible.builtin.meta: flush_handlers
+    - name: Reload WireGuard config
+      ansible.builtin.shell:
+        cmd: "wg syncconf {{ wireguard_interface }} <(wg-quick strip {{ wireguard_interface }})"
+        executable: /bin/bash
+      when: wg_config.changed
 
     - name: Wait for WireGuard interface to be ready
       ansible.builtin.command:
@@ -169,10 +172,3 @@
       loop: "{{ wireguard_extra_peers | default([]) }}"
       loop_control:
         label: "{{ item.name }}"
-
-  handlers:
-    - name: Restart WireGuard
-      ansible.builtin.systemd_service:
-        name: "wg-quick@{{ wireguard_interface }}"
-        state: restarted
-        daemon_reload: true
