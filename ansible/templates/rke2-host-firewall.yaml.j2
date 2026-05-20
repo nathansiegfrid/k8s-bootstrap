@@ -22,7 +22,7 @@ spec:
               protocol: TCP
             - port: "443"
               protocol: TCP
-            - port: "51820" # WireGuard
+            - port: "{{ wireguard_port }}"
               protocol: UDP
 
     # Allow SSH on WireGuard network

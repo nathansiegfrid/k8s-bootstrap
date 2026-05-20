@@ -20,7 +20,7 @@ rke2_kubeconfig: /etc/rancher/rke2/rke2.yaml
 
 wireguard_interface: wg0
 wireguard_network: 10.0.0.0/24
-wireguard_port: 51820
+wireguard_port: 41820
 wireguard_mtu: 1420
 wireguard_persistent_keepalive: 25
 wireguard_dir: /etc/wireguard
