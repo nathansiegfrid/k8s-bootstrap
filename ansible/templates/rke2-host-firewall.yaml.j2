@@ -34,23 +34,19 @@ spec:
               protocol: TCP
 
     # Allow RKE2 ports within cluster
-    - fromEntities:
-        - host
-        - remote-node
+    - fromCIDR:
+        - 127.0.0.1/32
+        - {{ wireguard_network }}
       toPorts:
         - ports:
+            - port: "10250" # kubelet metrics
+              protocol: TCP
             - port: "4240" # Cilium CNI health checks
               protocol: TCP
             - port: "8472" # Cilium CNI with VXLAN
               protocol: UDP
             - port: "51871" # Cilium CNI with WireGuard
               protocol: UDP
-    - fromEntities:
-        - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "10250" # kubelet metrics
-              protocol: TCP
 
 ---
 apiVersion: cilium.io/v2
@@ -64,22 +60,8 @@ spec:
   ingress:
     # Allow RKE2 ports on WireGuard network
     - fromCIDR:
+        - 127.0.0.1/32
         - {{ wireguard_network }}
-      toPorts:
-        - ports:
-            - port: "6443" # Kubernetes API
-              protocol: TCP
-            - port: "9345" # RKE2 supervisor API
-              protocol: TCP
-            - port: "2379" # etcd client port
-              protocol: TCP
-            - port: "2380" # etcd peer port
-              protocol: TCP
-
-    # Allow RKE2 ports within cluster
-    - fromEntities:
-        - host
-        - remote-node
       toPorts:
         - ports:
             - port: "6443" # Kubernetes API
