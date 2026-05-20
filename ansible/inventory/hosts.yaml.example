@@ -16,6 +16,12 @@ k8s_nodes:
     k8s_master_nodes:
     k8s_worker_nodes:
 
+k8s_new_nodes:
+  # TODO: Change this after initializing the cluster
+  children:
+    k8s_master_nodes:
+    k8s_worker_nodes:
+
 k8s_master_nodes:
   hosts:
     k8s-master-01:
