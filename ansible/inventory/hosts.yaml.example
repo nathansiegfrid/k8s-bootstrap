@@ -10,6 +10,7 @@ k8s_nodes:
     ssh_public_key: "ssh-ed25519 AAAA..."
 
     k8s_bootstrap_token: "very_secure_random_string"
+    k8s_agent_token: "optional_secure_random_string"
     etcd_s3_bucket: ""
     etcd_s3_region: "ap-southeast-1"
     etcd_s3_access_key: "AKIA..."

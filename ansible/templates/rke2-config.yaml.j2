@@ -8,7 +8,12 @@ profile: cis
 node-name: {{ inventory_hostname }}
 node-ip: {{ wireguard_ip }}
 
+{% if rke2_type == 'server' %}
 token: {{ rke2_token }}
+agent-token: {{ rke2_agent_token }}
+{% else %}
+token: {{ rke2_agent_token }}
+{% endif %}
 
 {% if inventory_hostname != rke2_first_master %}
 server: https://{{ hostvars[rke2_first_master].wireguard_ip }}:9345
