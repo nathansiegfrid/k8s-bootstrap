@@ -288,7 +288,7 @@
       when: rke2_type == 'server'
 
     - name: Create user kube directory
-      file:
+      ansible.builtin.file:
         path: "/home/{{ ansible_user }}/.kube"
         state: directory
         owner: "{{ ansible_user }}"

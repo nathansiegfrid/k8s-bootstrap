@@ -179,9 +179,9 @@
       when: not ansible_check_mode
       delegate_to: "{{ rke2_first_master if rke2_type == 'agent' else inventory_hostname }}"
       register: node_ready
-      delay: 10
-      retries: 30
       until: node_ready.stdout == "True"
+      retries: 30
+      delay: 10
       changed_when: false
 
     - name: Add kubectl to path
@@ -195,7 +195,7 @@
       when: rke2_type == 'server'
 
     - name: Create user kube directory
-      file:
+      ansible.builtin.file:
         path: "/home/{{ ansible_user }}/.kube"
         state: directory
         owner: "{{ ansible_user }}"

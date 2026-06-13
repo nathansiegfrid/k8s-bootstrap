@@ -134,9 +134,9 @@
           delegate_to: "{{ rke2_first_master }}"
           when: not ansible_check_mode
           register: drain_result
-          delay: 10
-          retries: 3
           until: drain_result.rc == 0
+          retries: 3
+          delay: 10
           failed_when: false
 
         - name: Reboot
