@@ -1,0 +1,68 @@
+---
+# Pre-install RKE2 on the fresh master node before restore.
+#
+# Why this exists:
+#   rke2 server --cluster-reset needs to start the etcd static pod immediately
+#   after restoring the snapshot. On a fresh node, RKE2 must first extract its
+#   runtime binaries (~14s) and then import all container images into containerd
+#   (~30s). This 44-second delay causes the restore process to get stuck in an
+#   infinite "Failed to test etcd connection" loop, as etcd never starts in time.
+#
+#   By installing and starting RKE2 once before the restore, the runtime
+#   binaries are already extracted and all images are cached in containerd.
+#   When --cluster-reset runs later, etcd starts in seconds.
+#
+# Usage:
+#   ansible-playbook 07_rke2_etcd_prerestore.yaml
+#   ansible-playbook 07_rke2_etcd_restore.yaml -e etcd_snapshot_name=<NAME>
+
+- name: Pre-install RKE2 on first master node
+  hosts: k8s_master_nodes[0]
+  become: true
+  vars:
+    ansible_host: "{{ wireguard_ip }}"
+    ansible_user: "{{ ssh_user }}"
+
+  environment:
+    PATH: "{{ rke2_bin_dir }}:{{ ansible_env.PATH }}"
+    KUBECONFIG: "{{ rke2_kubeconfig }}"
+
+  tasks:
+    - name: Install RKE2
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.rke2.io | sh -
+      environment:
+        INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+        INSTALL_RKE2_TYPE: server
+      args:
+        creates: /usr/local/bin/rke2
+      when: not ansible_check_mode
+
+    - name: Start RKE2 server
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Wait for API server to be ready
+      ansible.builtin.wait_for:
+        host: "{{ wireguard_ip }}"
+        port: 6443
+        sleep: 10
+        timeout: 300
+
+    - name: Wait for Ready status
+      ansible.builtin.command:
+        cmd: kubectl get node {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+      when: not ansible_check_mode
+      register: node_ready
+      until: node_ready.stdout == "True"
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Stop RKE2 server
+      ansible.builtin.systemd_service:
+        name: rke2-server
+        state: stopped
