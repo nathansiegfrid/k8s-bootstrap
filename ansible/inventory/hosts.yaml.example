@@ -8,6 +8,8 @@ k8s_nodes:
     ssh_default_user: root
     ssh_user: non_root_superuser
     ssh_public_key: "ssh-ed25519 AAAA..."
+    ssh_source_cidrs:
+      - "0.0.0.0/0" # For testing only, remove this in production
 
     k8s_bootstrap_token: "very_secure_random_string"
     k8s_agent_token: "optional_secure_random_string"

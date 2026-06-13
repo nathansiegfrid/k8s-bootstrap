@@ -25,9 +25,12 @@ spec:
             - port: "{{ wireguard_port }}"
               protocol: UDP
 
-    # Allow SSH on WireGuard network
+    # Allow SSH on WireGuard network and trusted sources
     - fromCIDR:
         - {{ wireguard_network }}
+        {% for source in ssh_source_cidrs | default([]) %}
+        - {{ source }}
+        {% endfor %}
       toPorts:
         - ports:
             - port: "22"
