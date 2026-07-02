@@ -1,0 +1,16 @@
+---
+- name: Update RKE2 with rolling restart
+  hosts: k8s_nodes
+  become: true
+  serial: 1
+
+  vars:
+    ansible_host: "{{ node_private_ip }}"
+    ansible_user: "{{ ssh_user }}"
+
+  tasks:
+    - name: Update RKE2 with rolling restart
+      ansible.builtin.include_role:
+        name: rke2_cis
+      vars:
+        rke2_action: rolling_update

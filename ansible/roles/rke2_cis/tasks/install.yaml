@@ -1,0 +1,62 @@
+---
+- name: Include config files
+  ansible.builtin.include_tasks: common_config_files.yaml
+
+- name: Install RKE2
+  ansible.builtin.shell:
+    cmd: curl -sfL https://get.rke2.io | sh -
+  environment:
+    INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+    INSTALL_RKE2_TYPE: "{{ rke2_type }}"
+  args:
+    creates: /usr/local/bin/rke2
+
+- name: Include CIS hardening
+  ansible.builtin.include_tasks: common_cis_hardening.yaml
+
+- name: Start RKE2 service on first master node
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: inventory_hostname == rke2_first_server
+
+- name: Wait for API server on first master node
+  ansible.builtin.wait_for:
+    host: "{{ node_private_ip }}"
+    port: 6443
+    sleep: 10
+    timeout: 300
+  when: inventory_hostname == rke2_first_server
+
+- name: Start RKE2 service on remaining master nodes
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    state: started
+    enabled: true
+    daemon_reload: true
+  when:
+    - rke2_type == 'server'
+    - inventory_hostname != rke2_first_server
+
+- name: Wait for API server on remaining master nodes
+  ansible.builtin.wait_for:
+    host: "{{ node_private_ip }}"
+    port: 6443
+    sleep: 10
+    timeout: 300
+  when:
+    - rke2_type == 'server'
+    - inventory_hostname != rke2_first_server
+
+- name: Start RKE2 service on worker nodes
+  ansible.builtin.systemd_service:
+    name: rke2-agent
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: rke2_type == 'agent'
+
+- name: Include node status
+  ansible.builtin.include_tasks: common_node_status.yaml

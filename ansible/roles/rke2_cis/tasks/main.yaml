@@ -1,0 +1,31 @@
+---
+- name: Get RKE2 server list
+  ansible.builtin.set_fact:
+    rke2_servers: >-
+      {%- set servers = [] -%}
+      {%- for host in groups['all'] | sort -%}
+      {%-   if hostvars[host].get('rke2_type', 'server') == 'server' -%}
+      {%-     set _ = servers.append(host) -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ servers }}
+  run_once: true
+
+- name: Assert at least one RKE2 server exists
+  ansible.builtin.assert:
+    that: rke2_servers | length > 0
+    msg: "FATAL: No RKE2 servers found in inventory! At least one host must have rke2_type set to 'server'."
+  run_once: true
+
+- name: Set first RKE2 server
+  ansible.builtin.set_fact:
+    rke2_first_server: "{{ rke2_servers | first | default('') }}"
+  run_once: true
+
+- name: Execute RKE2 tasks
+  environment:
+    PATH: "{{ rke2_bin_dir }}:{{ ansible_env.PATH }}"
+    KUBECONFIG: "{{ rke2_kubeconfig }}"
+  block:
+    - name: Include RKE2 tasks
+      ansible.builtin.include_tasks: "{{ rke2_action | default('install') }}.yaml"

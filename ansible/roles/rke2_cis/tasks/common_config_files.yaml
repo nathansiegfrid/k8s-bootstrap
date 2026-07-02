@@ -1,0 +1,65 @@
+---
+- name: Create RKE2 data directory
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ rke2_data_dir }}"
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ rke2_config_dir }}"
+    - "{{ rke2_data_dir }}/agent/etc/kubelet.conf.d"
+
+- name: Create required master node directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  when: rke2_type == 'server'
+  loop:
+    - "{{ rke2_data_dir }}/server/manifests"
+    - /var/log/kubernetes
+
+- name: Write RKE2 config
+  ansible.builtin.template:
+    src: rke2-config.yaml.j2
+    dest: "{{ rke2_config_dir }}/config.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reboot required
+
+- name: Write kubelet drop-in config
+  ansible.builtin.copy:
+    src: kubelet-config.yaml
+    dest: "{{ rke2_data_dir }}/agent/etc/kubelet.conf.d/99-custom.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reboot required
+
+- name: Write audit policy
+  ansible.builtin.copy:
+    src: audit-policy.yaml
+    dest: "{{ rke2_config_dir }}/audit-policy.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  when: rke2_type == 'server'
+  notify: Reboot required
+
+- name: Write PSA config
+  ansible.builtin.template:
+    src: rke2-psa-config.yaml.j2
+    dest: "{{ rke2_config_dir }}/rke2-psa-config.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  when: rke2_type == 'server'
+  notify: Reboot required

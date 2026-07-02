@@ -11,8 +11,8 @@ k8s_nodes:
     ssh_source_cidrs:
       - "0.0.0.0/0" # For testing only, remove this in production
 
-    k8s_bootstrap_token: "very_secure_random_string"
-    k8s_agent_token: "optional_secure_random_string"
+    rke2_server_token: "very_secure_random_string"
+    rke2_agent_token: "optional_secure_random_string"
     etcd_s3_bucket: ""
     etcd_s3_region: "ap-southeast-1"
     etcd_s3_access_key: "AKIA..."
@@ -35,23 +35,23 @@ k8s_new_nodes:
 k8s_master_nodes:
   hosts:
     k8s-master-01:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.1
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.1
     k8s-master-02:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.2
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.2
     k8s-master-03:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.3
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.3
 
 k8s_worker_nodes:
   hosts:
     k8s-worker-01:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.11
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.11
     k8s-worker-02:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.12
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.12
     k8s-worker-03:
-      public_ip: <PUBLIC_IP>
-      wireguard_ip: 10.0.0.13
+      node_public_ip: <PUBLIC_IP>
+      node_private_ip: 10.0.0.13

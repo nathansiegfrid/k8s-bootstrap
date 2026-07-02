@@ -6,27 +6,27 @@
 profile: cis
 
 node-name: {{ inventory_hostname }}
-node-ip: {{ wireguard_ip }}
+node-ip: {{ node_private_ip }}
 
 {% if rke2_type == 'server' %}
-token: {{ rke2_token }}
-agent-token: {{ rke2_agent_token }}
+token: {{ rke2_server_token }}
+agent-token: {{ rke2_agent_token | default(rke2_server_token) }}
 {% else %}
-token: {{ rke2_agent_token }}
+token: {{ rke2_agent_token | default(rke2_server_token) }}
 {% endif %}
 
-{% if inventory_hostname != rke2_first_master %}
-server: https://{{ hostvars[rke2_first_master].wireguard_ip }}:9345
+{% if inventory_hostname != rke2_first_server %}
+server: https://{{ hostvars[rke2_first_server].node_private_ip }}:9345
 {% endif %}
 
 {% if rke2_type == 'server' %}
-bind-address: {{ wireguard_ip }}
-advertise-address: {{ wireguard_ip }}
+bind-address: {{ node_private_ip }}
+advertise-address: {{ node_private_ip }}
 
 tls-san:
-{% for host in groups['k8s_master_nodes'] %}
+{% for host in rke2_servers %}
   - {{ host }}
-  - {{ hostvars[host].wireguard_ip }}
+  - {{ hostvars[host].node_private_ip }}
 {% endfor %}
 
 cni: {{ rke2_cni }}
@@ -59,7 +59,7 @@ kube-apiserver-arg:
   - audit-log-maxsize=100
 
 node-taint:
-  - node-role.kubernetes.io/control-plane:NoSchedule
+  - CriticalAddonsOnly:NoExecute
 
 etcd-snapshot-schedule-cron: "0 */6 * * *"
 etcd-snapshot-retention: 28

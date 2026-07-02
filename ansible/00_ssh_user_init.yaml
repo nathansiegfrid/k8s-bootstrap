@@ -9,8 +9,9 @@
   hosts: k8s_new_nodes
   gather_facts: false
   become: true
+
   vars:
-    ansible_host: "{{ public_ip }}"
+    ansible_host: "{{ node_public_ip }}"
     ansible_user: "{{ ssh_default_user }}"
 
   tasks:

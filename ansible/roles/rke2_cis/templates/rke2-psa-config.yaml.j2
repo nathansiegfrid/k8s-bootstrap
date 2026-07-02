@@ -10,7 +10,7 @@ plugins:
       kind: PodSecurityConfiguration
       defaults:
         enforce: "restricted"
-        enforce-version: "v1.34"
+        enforce-version: "{{ rke2_psa_enforce_version }}"
         audit: "restricted"
         audit-version: "latest"
         warn: "restricted"

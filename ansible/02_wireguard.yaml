@@ -8,14 +8,15 @@
   hosts: k8s_nodes
   gather_facts: false
   become: true
+
   vars:
-    ansible_host: "{{ public_ip }}"
+    ansible_host: "{{ node_public_ip }}"
     ansible_user: "{{ ssh_user }}"
 
   pre_tasks:
     - name: Check if WireGuard IP is reachable
       ansible.builtin.wait_for:
-        host: "{{ wireguard_ip }}"
+        host: "{{ node_private_ip }}"
         port: 22
         timeout: 3
       delegate_to: localhost
@@ -25,7 +26,7 @@
 
     - name: Prefer WireGuard IP when reachable
       ansible.builtin.set_fact:
-        ansible_host: "{{ wireguard_ip }}"
+        ansible_host: "{{ node_private_ip }}"
       when: wg_reachable.state is defined and wg_reachable.state == "started"
 
     - name: Show selected connection target
@@ -148,7 +149,7 @@
 
     - name: Ping all peers over WireGuard
       ansible.builtin.command:
-        cmd: "ping -c 3 -W 5 {{ hostvars[item].wireguard_ip }}"
+        cmd: "ping -c 3 -W 5 {{ hostvars[item].node_private_ip }}"
       loop: "{{ groups['k8s_nodes'] | difference([inventory_hostname]) }}"
       register: ping_results
       failed_when: ping_results.rc != 0
@@ -156,7 +157,7 @@
 
     - name: Print peer connectivity results
       ansible.builtin.debug:
-        msg: "{{ inventory_hostname }} -> {{ item.item }} ({{ hostvars[item.item].wireguard_ip }}): OK"
+        msg: "{{ inventory_hostname }} -> {{ item.item }} ({{ hostvars[item.item].node_private_ip }}): OK"
       loop: "{{ ping_results.results }}"
       loop_control:
         label: "{{ item.item }}"

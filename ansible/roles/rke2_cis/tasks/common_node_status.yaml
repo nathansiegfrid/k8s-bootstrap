@@ -1,0 +1,25 @@
+---
+- name: Wait for node to register or become ready
+  ansible.builtin.command:
+    cmd: kubectl get node {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status},{.status.conditions[?(@.type=="Ready")].reason}'
+  when: not ansible_check_mode
+  delegate_to: "{{ inventory_hostname if rke2_type == 'server' else rke2_first_server }}"
+  register: node_ready
+  until: node_ready.stdout.startswith('True') or (rke2_cni == 'none' and 'KubeletNotReady' in node_ready.stdout)
+  retries: 40
+  delay: 15
+  changed_when: false
+
+- name: Get node status
+  ansible.builtin.command:
+    cmd: kubectl get nodes -o wide
+  when: not ansible_check_mode
+  delegate_to: "{{ inventory_hostname if rke2_type == 'server' else rke2_first_server }}"
+  register: node_status
+  changed_when: false
+  run_once: true
+
+- name: Print node status
+  ansible.builtin.debug:
+    msg: "{{ node_status.stdout_lines }}"
+  run_once: true

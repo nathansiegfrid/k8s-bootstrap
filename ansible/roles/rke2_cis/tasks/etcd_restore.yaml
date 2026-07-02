@@ -1,0 +1,120 @@
+---
+- name: Validate that etcd_snapshot_name is provided
+  ansible.builtin.fail:
+    msg: etcd_snapshot_name is required. Please provide it via extra vars (e.g., -e etcd_snapshot_name=<NAME>).
+  when: etcd_snapshot_name is not defined or etcd_snapshot_name | length == 0
+  run_once: true
+
+- name: Confirm restore operation
+  ansible.builtin.pause:
+    prompt: >-
+      WARNING: This will restore etcd from S3 snapshot '{{ etcd_snapshot_name }}'
+      on host '{{ inventory_hostname }}' ({{ node_private_ip }}).
+      Type 'restore' to proceed
+  register: confirmation
+  run_once: true
+
+- name: Abort if confirmation was not given
+  ansible.builtin.fail:
+    msg: "Restore aborted by operator."
+  when: confirmation.user_input != "restore"
+  run_once: true
+
+- name: Include config files
+  ansible.builtin.include_tasks: common_config_files.yaml
+  run_once: true
+
+- name: Install RKE2
+  ansible.builtin.shell:
+    cmd: curl -sfL https://get.rke2.io | sh -
+  environment:
+    INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+    INSTALL_RKE2_TYPE: "{{ rke2_type }}"
+  args:
+    creates: /usr/local/bin/rke2
+  run_once: true
+
+- name: Include CIS hardening
+  ansible.builtin.include_tasks: common_cis_hardening.yaml
+  run_once: true
+
+# Why we start RKE2 before restoring:
+# rke2 server --cluster-reset needs to start the etcd static pod immediately
+# after restoring the snapshot. On a fresh node, RKE2 must first extract its
+# runtime binaries (~14s) and then import all container images into containerd
+# (~30s). This delay causes the restore process to get stuck in an infinite
+# "Failed to test etcd connection" loop, as etcd never starts in time.
+#
+# By starting RKE2 once before the restore, the runtime binaries are already
+# extracted and all images are cached in containerd. When --cluster-reset runs
+# later, etcd starts instantly.
+- name: Start RKE2 server to extract binaries and images
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    state: started
+    enabled: true
+    daemon_reload: true
+  run_once: true
+
+- name: Wait for API server to be ready before stopping
+  ansible.builtin.wait_for:
+    host: "{{ node_private_ip }}"
+    port: 6443
+    sleep: 10
+    timeout: 300
+  run_once: true
+
+- name: Stop RKE2 server service for restore
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    state: stopped
+  failed_when: false
+  run_once: true
+
+- name: Run etcd cluster-reset restore from S3 snapshot
+  ansible.builtin.shell:
+    cmd: rke2 server --cluster-reset --cluster-reset-restore-path={{ etcd_snapshot_name }} > {{ etcd_restore_log }} 2>&1
+  environment:
+    INSTALL_RKE2_VERSION: "{{ rke2_version }}"
+    INSTALL_RKE2_TYPE: "{{ rke2_type }}"
+  when: not ansible_check_mode
+  run_once: true
+
+- name: Display restore output
+  ansible.builtin.debug:
+    msg: "{{ restore_result.stdout_lines | default([]) }}"
+  run_once: true
+
+- name: Display restore log
+  ansible.builtin.command:
+    cmd: cat {{ etcd_restore_log }}
+  changed_when: false
+  failed_when: false
+  register: etcd_restore_log_content
+  when: not ansible_check_mode
+  run_once: true
+
+- name: Print restore log
+  ansible.builtin.debug:
+    msg: "{{ etcd_restore_log_content.stdout_lines | default([]) }}"
+  when: not ansible_check_mode
+  run_once: true
+
+- name: Start RKE2 service
+  ansible.builtin.systemd_service:
+    name: rke2-server
+    state: started
+    daemon_reload: true
+  run_once: true
+
+- name: Wait for API server
+  ansible.builtin.wait_for:
+    host: "{{ node_private_ip }}"
+    port: 6443
+    sleep: 10
+    timeout: 300
+  run_once: true
+
+- name: Include node status
+  ansible.builtin.include_tasks: common_node_status.yaml
+  run_once: true

@@ -1,0 +1,55 @@
+---
+- name: Setup RKE2 clients
+  hosts: k8s_master_nodes
+  gather_facts: false
+  become: true
+
+  vars:
+    ansible_host: "{{ node_private_ip }}"
+    ansible_user: "{{ ssh_user }}"
+    rke2_bin_dir: /var/lib/rancher/rke2/bin
+    rke2_kubeconfig: /etc/rancher/rke2/rke2.yaml
+
+  tasks:
+    - name: Add kubectl to path
+      ansible.builtin.copy:
+        content: |
+          export PATH=$PATH:{{ rke2_bin_dir }}
+        dest: /etc/profile.d/rke2.sh
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Create user kube directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0700"
+
+    - name: Write user kubeconfig file
+      ansible.builtin.copy:
+        src: "{{ rke2_kubeconfig }}"
+        dest: "/home/{{ ansible_user }}/.kube/config"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+
+    - name: Check if Helm is already installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/helm
+      register: helm_binary
+
+    - name: Download Helm install script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get-helm-3
+        mode: "0700"
+      when: not helm_binary.stat.exists
+
+    - name: Install Helm
+      ansible.builtin.command:
+        cmd: /tmp/get-helm-3
+      when: not helm_binary.stat.exists

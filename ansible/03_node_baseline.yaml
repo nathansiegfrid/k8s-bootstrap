@@ -5,12 +5,13 @@
 - name: Prepare nodes for Kubernetes
   hosts: k8s_nodes
   become: true
+
   vars:
-    ansible_host: "{{ wireguard_ip }}"
+    ansible_host: "{{ node_private_ip }}"
     ansible_user: "{{ ssh_user }}"
 
   tasks:
-    - name: Set system hostname
+    - name: Set hostname
       ansible.builtin.hostname:
         name: "{{ inventory_hostname }}"
 
@@ -26,11 +27,8 @@
     - name: Install cluster dependencies
       ansible.builtin.apt:
         name:
-          - apparmor
-          - apparmor-utils
           - chrony # NTP time sync
           - nfs-common # NFS-based volumes
-          - open-iscsi # Longhorn
         state: present
         update_cache: true
 
@@ -41,7 +39,6 @@
         enabled: true
       loop:
         - chrony
-        - iscsid
 
     # Kubernetes needs swap off. The kubelet will refuse to start otherwise.
     - name: Disable swap for current session
@@ -53,8 +50,8 @@
     - name: Disable swap permanently (survives reboots)
       ansible.builtin.replace:
         path: /etc/fstab
-        regexp: "^(\\s*)([^#\\n]+\\s+)(\\w+\\s+)swap(\\s+.*)$"
-        replace: "#\\1\\2\\3swap\\4"
+        regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+        replace: '#\1\2\3swap\4'
         backup: true
 
     - name: Load required kernel modules
@@ -63,7 +60,6 @@
         state: present
       loop:
         - br_netfilter
-        - ip6table_filter
         - iptable_filter
         - iptable_mangle
         - iptable_nat
@@ -104,23 +100,6 @@
         group: root
         mode: "0644"
       notify: Restart chrony
-
-    - name: Add node public IPs to /etc/hosts
-      ansible.builtin.lineinfile:
-        path: /etc/hosts
-        regexp: ".*\\s+{{ item }}$"
-        line: "{{ hostvars[item].public_ip }} {{ item }}"
-        state: present
-      loop: "{{ groups['k8s_nodes'] }}"
-
-    - name: Add node WireGuard IPs to /etc/hosts
-      ansible.builtin.lineinfile:
-        path: /etc/hosts
-        regexp: ".*\\s+{{ item }}-wg$"
-        line: "{{ hostvars[item].wireguard_ip }} {{ item }}-wg"
-        state: present
-      loop: "{{ groups['k8s_nodes'] }}"
-      when: hostvars[item].wireguard_ip is defined
 
   handlers:
     - name: Restart chrony

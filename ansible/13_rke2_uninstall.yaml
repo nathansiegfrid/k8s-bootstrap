@@ -1,0 +1,16 @@
+---
+- name: Destroy RKE2 cluster
+  hosts: k8s_nodes
+  gather_facts: false
+  become: true
+
+  vars:
+    ansible_host: "{{ node_private_ip }}"
+    ansible_user: "{{ ssh_user }}"
+
+  tasks:
+    - name: Uninstall RKE2
+      ansible.builtin.include_role:
+        name: rke2_cis
+      vars:
+        rke2_action: uninstall
