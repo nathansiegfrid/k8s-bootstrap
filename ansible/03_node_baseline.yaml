@@ -44,7 +44,7 @@
     - name: Disable swap for current session
       ansible.builtin.command: swapoff -a
       when:
-        - ansible_swaptotal_mb > 0
+        - ansible_facts['swaptotal_mb'] > 0
         - not ansible_check_mode
 
     - name: Disable swap permanently (survives reboots)
