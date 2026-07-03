@@ -11,14 +11,16 @@
     rke2_kubeconfig: /etc/rancher/rke2/rke2.yaml
 
   tasks:
-    - name: Add kubectl to path
-      ansible.builtin.copy:
-        content: |
-          export PATH=$PATH:{{ rke2_bin_dir }}
-        dest: /etc/profile.d/rke2.sh
-        owner: root
-        group: root
-        mode: "0644"
+    - name: Symlink RKE2 binaries to /usr/local/bin
+      ansible.builtin.file:
+        src: "{{ rke2_bin_dir }}/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        state: link
+        force: true
+      loop:
+        - kubectl
+        - crictl
+        - ctr
 
     - name: Create user kube directory
       ansible.builtin.file:

@@ -1,7 +1,10 @@
 ---
 - name: Wait for node to register or become ready
   ansible.builtin.command:
-    cmd: kubectl get node {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status},{.status.conditions[?(@.type=="Ready")].reason}'
+    cmd: >-
+      {{ rke2_bin_dir }}/kubectl --kubeconfig {{ rke2_kubeconfig }}
+      get node {{ inventory_hostname }}
+      -o 'jsonpath={.status.conditions[?(@.type=="Ready")].status},{.status.conditions[?(@.type=="Ready")].reason}'
   when: not ansible_check_mode
   delegate_to: "{{ inventory_hostname if rke2_type == 'server' else rke2_first_server }}"
   register: node_ready
@@ -12,7 +15,7 @@
 
 - name: Get node status
   ansible.builtin.command:
-    cmd: kubectl get nodes -o wide
+    cmd: "{{ rke2_bin_dir }}/kubectl --kubeconfig {{ rke2_kubeconfig }} get nodes -o wide"
   when: not ansible_check_mode
   delegate_to: "{{ inventory_hostname if rke2_type == 'server' else rke2_first_server }}"
   register: node_status

@@ -23,9 +23,6 @@
   run_once: true
 
 - name: Execute RKE2 tasks
-  environment:
-    PATH: "{{ rke2_bin_dir }}:{{ ansible_env.PATH }}"
-    KUBECONFIG: "{{ rke2_kubeconfig }}"
   block:
     - name: Include RKE2 tasks
       ansible.builtin.include_tasks: "{{ rke2_action | default('install') }}.yaml"
