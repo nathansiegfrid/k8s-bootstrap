@@ -59,7 +59,8 @@ kube-apiserver-arg:
   - audit-log-maxsize=100
 
 node-taint:
-  - CriticalAddonsOnly:NoExecute
+  # RKE2 components explicitly tolerate NoSchedule.
+  - node-role.kubernetes.io/control-plane:NoSchedule
 
 etcd-snapshot-schedule-cron: "0 */6 * * *"
 etcd-snapshot-retention: 28
