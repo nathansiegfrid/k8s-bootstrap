@@ -28,9 +28,9 @@ spec:
     # Allow SSH on WireGuard network and trusted sources
     - fromCIDR:
         - {{ wireguard_network }}
-        {% for source in ssh_source_cidrs | default([]) %}
+{% for source in ssh_source_cidrs | default([]) %}
         - {{ source }}
-        {% endfor %}
+{% endfor %}
       toPorts:
         - ports:
             - port: "22"
@@ -56,7 +56,7 @@ spec:
 apiVersion: cilium.io/v2
 kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: rke2-host-firewall-master
+  name: rke2-control-plane-host-firewall
 spec:
   nodeSelector:
     matchLabels:
