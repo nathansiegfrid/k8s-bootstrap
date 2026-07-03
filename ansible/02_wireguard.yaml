@@ -118,7 +118,7 @@
     - name: Enable and start WireGuard interface
       ansible.builtin.systemd_service:
         name: "wg-quick@{{ wireguard_interface }}"
-        state: started
+        state: "{{ 'started' if ansible_host == node_private_ip else 'restarted' }}"
         enabled: true
         daemon_reload: true
 
