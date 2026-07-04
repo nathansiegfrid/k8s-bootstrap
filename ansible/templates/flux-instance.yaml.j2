@@ -1,0 +1,25 @@
+# Deployed by Ansible.
+# Do not edit manually, changes will be overwritten.
+#
+# https://github.com/controlplaneio-fluxcd/flux-operator
+
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "{{ flux_instance_version }}"
+    registry: ghcr.io/fluxcd
+  cluster:
+    multitenant: true
+    tenantDefaultServiceAccount: flux
+  sync:
+    kind: GitRepository
+    url: "{{ flux_gitops_repo_url }}"
+    ref: "{{ flux_gitops_ref }}"
+    path: "{{ flux_gitops_path }}"
+{% if flux_deploy_key | length > 0 %}
+    pullSecret: flux-system
+{% endif %}
