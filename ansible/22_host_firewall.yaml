@@ -1,0 +1,64 @@
+---
+- name: Apply Cilium host firewall
+  hosts: k8s_master_nodes[0]
+  gather_facts: false
+
+  vars:
+    ansible_host: "{{ node_private_ip }}"
+    ansible_user: "{{ ssh_user }}"
+
+  tasks:
+    - name: Render Cilium host firewall config
+      ansible.builtin.template:
+        src: cilium-host-firewall.yaml.j2
+        dest: /tmp/cilium-host-firewall.yaml
+        mode: "0644"
+
+    - name: Fetch rendered host firewall config
+      ansible.builtin.command: cat /tmp/cilium-host-firewall.yaml
+      register: rendered_firewall_manifest
+      changed_when: false
+      check_mode: false
+
+    - name: Get kubectl diff for host firewall
+      ansible.builtin.command: kubectl diff -f /tmp/cilium-host-firewall.yaml
+      register: kubectl_diff_result
+      failed_when: kubectl_diff_result.rc not in [0, 1]
+      changed_when: false
+      check_mode: false
+
+    - name: Prompt user to apply host firewall
+      ansible.builtin.pause:
+        prompt: |
+          The following host firewall manifest will be applied:
+
+          {{ rendered_firewall_manifest.stdout }}
+
+          === KUBECTL DIFF ===
+          {{ kubectl_diff_result.stdout | default('No differences found.', true) }}
+          ====================
+
+          Do you want to apply this firewall? (yes/no)
+      register: user_approval
+      when:
+        - kubectl_diff_result.rc != 0
+        - not ansible_check_mode
+
+    - name: Assert user confirmation
+      ansible.builtin.assert:
+        that:
+          - user_approval.user_input | lower in ['yes', 'y']
+        fail_msg: "Firewall apply aborted."
+        success_msg: "Firewall apply confirmed."
+      when:
+        - kubectl_diff_result.rc != 0
+        - not ansible_check_mode
+
+    - name: Apply Cilium host firewall config
+      ansible.builtin.command:
+        cmd: "kubectl apply -f /tmp/cilium-host-firewall.yaml"
+      when:
+        - kubectl_diff_result.rc != 0
+        - not ansible_check_mode
+      register: firewall_apply_result
+      changed_when: "'unchanged' not in firewall_apply_result.stdout"

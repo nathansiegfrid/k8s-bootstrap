@@ -53,16 +53,3 @@
       when: not ansible_check_mode
       register: cilium_helm_result
       changed_when: "'has been upgraded' in cilium_helm_result.stdout or 'has been installed' in cilium_helm_result.stdout"
-
-    - name: Render Cilium host firewall config
-      ansible.builtin.template:
-        src: cilium-host-firewall.yaml.j2
-        dest: /tmp/cilium-host-firewall.yaml
-        mode: "0644"
-
-    - name: Apply Cilium host firewall config
-      ansible.builtin.command:
-        cmd: "kubectl apply -f /tmp/cilium-host-firewall.yaml"
-      when: not ansible_check_mode
-      register: firewall_apply_result
-      changed_when: "'unchanged' not in firewall_apply_result.stdout"
