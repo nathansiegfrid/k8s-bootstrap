@@ -19,6 +19,15 @@
     success_msg: "RKE2 servers found."
   run_once: true
 
+- name: Assert rke2_server_token is valid
+  ansible.builtin.assert:
+    that:
+      - rke2_server_token is defined
+      - rke2_server_token | length >= 16
+    fail_msg: "FATAL: rke2_server_token must be defined and at least 16 characters long."
+    success_msg: "rke2_server_token is valid."
+  run_once: true
+
 - name: Set first RKE2 server
   ansible.builtin.set_fact:
     rke2_first_server: "{{ rke2_servers | first }}"

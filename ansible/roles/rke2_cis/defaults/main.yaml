@@ -1,6 +1,9 @@
 ---
 rke2_type: server
 
+rke2_server_token: ""
+rke2_agent_token: ""
+
 # See available versions in https://docs.rke2.io/release-notes/v1.34.X
 rke2_version: v1.34.7+rke2r1
 rke2_psa_enforce_version: "v1.34"
@@ -19,8 +22,6 @@ rke2_config_dir: /etc/rancher/rke2
 rke2_data_dir: /var/lib/rancher/rke2
 rke2_bin_dir: /var/lib/rancher/rke2/bin
 rke2_kubeconfig: /etc/rancher/rke2/rke2.yaml
-
-reboot_required: false
 
 etcd_s3: false
 etcd_s3_bucket: ""
