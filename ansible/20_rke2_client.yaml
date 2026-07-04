@@ -11,6 +11,16 @@
     rke2_kubeconfig: /etc/rancher/rke2/rke2.yaml
 
   tasks:
+    - name: Check if RKE2 is installed
+      ansible.builtin.stat:
+        path: "{{ rke2_kubeconfig }}"
+      register: rke2_kubeconfig_file
+
+    - name: Assert RKE2 is installed
+      ansible.builtin.assert:
+        that: rke2_kubeconfig_file.stat.exists
+        fail_msg: "RKE2 is not installed on this node. Please run the RKE2 installation playbook first."
+
     - name: Symlink RKE2 binaries to /usr/local/bin
       ansible.builtin.file:
         src: "{{ rke2_bin_dir }}/{{ item }}"
