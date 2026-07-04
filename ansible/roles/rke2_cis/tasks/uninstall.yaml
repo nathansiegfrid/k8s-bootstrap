@@ -7,10 +7,12 @@
   register: confirmation
   run_once: true
 
-- name: Validate confirmation
-  ansible.builtin.fail:
-    msg: "Cluster destruction aborted."
-  when: confirmation.user_input != "destroy-cluster"
+- name: Assert user confirmation
+  ansible.builtin.assert:
+    that:
+      - confirmation.user_input == "destroy-cluster"
+    fail_msg: "Cluster destruction aborted."
+    success_msg: "Cluster destruction confirmed."
   run_once: true
 
 - name: Run RKE2 uninstall script

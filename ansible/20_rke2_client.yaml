@@ -18,8 +18,10 @@
 
     - name: Assert RKE2 is installed
       ansible.builtin.assert:
-        that: rke2_kubeconfig_file.stat.exists
+        that:
+          - rke2_kubeconfig_file.stat.exists
         fail_msg: "RKE2 is not installed on this node. Please run the RKE2 installation playbook first."
+        success_msg: "RKE2 is installed."
 
     - name: Symlink RKE2 binaries to /usr/local/bin
       ansible.builtin.file:

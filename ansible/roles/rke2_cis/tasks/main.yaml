@@ -13,8 +13,10 @@
 
 - name: Assert at least one RKE2 server exists
   ansible.builtin.assert:
-    that: rke2_servers | length > 0
-    msg: "FATAL: No RKE2 servers found in inventory! At least one host must have rke2_type set to 'server'."
+    that:
+      - rke2_servers | length > 0
+    fail_msg: "FATAL: No RKE2 servers found in inventory! At least one host must have rke2_type set to 'server'."
+    success_msg: "RKE2 servers found."
   run_once: true
 
 - name: Set first RKE2 server

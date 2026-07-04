@@ -1,8 +1,11 @@
 ---
-- name: Validate that etcd_snapshot_name is provided
-  ansible.builtin.fail:
-    msg: etcd_snapshot_name is required. Please provide it via extra vars (e.g., -e etcd_snapshot_name=<NAME>).
-  when: etcd_snapshot_name is not defined or etcd_snapshot_name | length == 0
+- name: Assert etcd_snapshot_name is provided
+  ansible.builtin.assert:
+    that:
+      - etcd_snapshot_name is defined
+      - etcd_snapshot_name | length > 0
+    fail_msg: "etcd_snapshot_name is required. Please provide it via extra vars (e.g., -e etcd_snapshot_name=<NAME>)."
+    success_msg: "etcd_snapshot_name is defined."
   run_once: true
 
 - name: Confirm restore operation
@@ -14,10 +17,12 @@
   register: confirmation
   run_once: true
 
-- name: Abort if confirmation was not given
-  ansible.builtin.fail:
-    msg: "Restore aborted by operator."
-  when: confirmation.user_input != "restore"
+- name: Assert user confirmation
+  ansible.builtin.assert:
+    that:
+      - confirmation.user_input == "restore"
+    fail_msg: "Restore aborted."
+    success_msg: "Restore confirmed."
   run_once: true
 
 - name: Include config files
