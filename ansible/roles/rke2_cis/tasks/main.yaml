@@ -19,7 +19,7 @@
 
 - name: Set first RKE2 server
   ansible.builtin.set_fact:
-    rke2_first_server: "{{ rke2_servers | first | default('') }}"
+    rke2_first_server: "{{ rke2_servers | first }}"
   run_once: true
 
 - name: Execute RKE2 tasks

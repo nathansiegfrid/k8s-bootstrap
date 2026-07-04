@@ -32,4 +32,4 @@ encryption:
 # Prevent Pod CIDR from overlapping with WireGuard's 10.0.0.0/24 (defaults to 10.0.0.0/8).
 ipam:
   operator:
-    clusterPoolIPv4PodCIDRList: ["{{ rke2_cluster_cidr }}"]
+    clusterPoolIPv4PodCIDRList: ["{{ rke2_cluster_cidr | default('10.42.0.0/16') }}"]

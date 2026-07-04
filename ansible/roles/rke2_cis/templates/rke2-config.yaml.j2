@@ -34,9 +34,13 @@ cluster-cidr: {{ rke2_cluster_cidr }}
 service-cidr: {{ rke2_service_cidr }}
 cluster-dns: {{ rke2_cluster_dns }}
 
-disable-kube-proxy: true
+disable-kube-proxy: {{ rke2_disable_kube_proxy | lower }}
+{% if rke2_disable_components | length > 0 %}
 disable:
-  - rke2-ingress-nginx
+{% for component in rke2_disable_components %}
+  - {{ component }}
+{% endfor %}
+{% endif %}
 
 write-kubeconfig-mode: "0600"
 
