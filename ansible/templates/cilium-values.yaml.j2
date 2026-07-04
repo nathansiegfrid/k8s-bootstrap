@@ -1,3 +1,5 @@
+namespaceOverride: cilium
+
 # Enable host firewall.
 # https://docs.cilium.io/en/latest/security/host-firewall/
 # https://docs.cilium.io/en/latest/security/policy/host/#hostpolicies
@@ -22,7 +24,7 @@ operator:
 
 # Specify which network interfaces can run the eBPF datapath.
 # Prevents Cilium's device auto-detection from choosing wg0.
-devices: "eth0,!wg0"
+# devices: eth0,!wg0
 
 # Enable WireGuard-based transparent encryption for all pod-to-pod traffic.
 encryption:
