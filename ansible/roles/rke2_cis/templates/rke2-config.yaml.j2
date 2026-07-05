@@ -34,6 +34,8 @@ cluster-cidr: {{ rke2_cluster_cidr }}
 service-cidr: {{ rke2_service_cidr }}
 cluster-dns: {{ rke2_cluster_dns }}
 
+ingress-controller: {{ rke2_ingress_controller }}
+
 disable-kube-proxy: {{ rke2_disable_kube_proxy | lower }}
 {% if rke2_disable_components | length > 0 %}
 disable:

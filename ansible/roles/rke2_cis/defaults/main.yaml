@@ -9,9 +9,9 @@ rke2_version: v1.34.7+rke2r1
 rke2_psa_enforce_version: "v1.34"
 
 rke2_cni: none
+rke2_ingress_controller: none
 rke2_disable_kube_proxy: true
-rke2_disable_components:
-  - rke2-ingress-nginx
+rke2_disable_components: []
 
 # Must not overlap with the nodes' private IPs or cloud internal network.
 rke2_cluster_cidr: 10.42.0.0/16
