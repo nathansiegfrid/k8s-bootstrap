@@ -24,6 +24,7 @@
         # Cilium 1.20
         - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
         - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
+        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
         - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
         - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
         - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
@@ -57,12 +58,12 @@
       changed_when: "'not labeled' not in label_ns.stdout"
 
     # Stable: 1.19.5
-    # Latest: 1.20.0-pre.3
+    # Latest: 1.20.0-pre.4
     - name: Install Cilium via Helm
       ansible.builtin.command:
         cmd: >-
           helm upgrade --install cilium oci://quay.io/cilium/charts/cilium
-          --version 1.20.0-pre.3
+          --version 1.20.0-pre.4
           --namespace cilium
           --wait
           --timeout 10m
