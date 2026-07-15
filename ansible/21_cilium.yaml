@@ -8,28 +8,10 @@
     ansible_user: "{{ ssh_user }}"
 
   tasks:
-    # See the link below (depending on the Cilium version) for required Gateway API CRDs:
-    # https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/#prerequisites
-    # https://docs.cilium.io/en/latest/network/servicemesh/gateway-api/gateway-api/#prerequisites
     - name: Apply Gateway API CRDs
       ansible.builtin.command:
         cmd: "kubectl apply -f {{ item }}"
-      loop:
-        # Cilium 1.19
-        # - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
-        # - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
-        # - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
-        # - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
-        # - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
-        # Cilium 1.20
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_backendtlspolicies.yaml
-        - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
+      loop: "{{ cilium_gateway_api_crds }}"
       when: not ansible_check_mode
       register: crd_apply_result
       changed_when: "'unchanged' not in crd_apply_result.stdout"
@@ -42,7 +24,7 @@
 
     - name: Ensure cilium namespace exists
       ansible.builtin.command:
-        cmd: kubectl create namespace cilium
+        cmd: kubectl create namespace {{ cilium_namespace }}
       register: create_ns
       failed_when: create_ns.rc != 0 and 'AlreadyExists' not in create_ns.stderr
       changed_when: create_ns.rc == 0
@@ -50,21 +32,19 @@
     - name: Label cilium namespace for privileged Pod Security
       ansible.builtin.command:
         cmd: >-
-          kubectl label namespace cilium --overwrite
+          kubectl label namespace {{ cilium_namespace }} --overwrite
           pod-security.kubernetes.io/enforce=privileged
           pod-security.kubernetes.io/audit=privileged
           pod-security.kubernetes.io/warn=privileged
       register: label_ns
       changed_when: "'not labeled' not in label_ns.stdout"
 
-    # Stable: 1.19.5
-    # Latest: 1.20.0-pre.4
     - name: Install Cilium via Helm
       ansible.builtin.command:
         cmd: >-
           helm upgrade --install cilium oci://quay.io/cilium/charts/cilium
-          --version 1.20.0-pre.4
-          --namespace cilium
+          --version {{ cilium_version }}
+          --namespace {{ cilium_namespace }}
           --wait
           --timeout 10m
           -f /tmp/cilium-values.yaml
