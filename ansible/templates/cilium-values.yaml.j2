@@ -48,11 +48,17 @@ operator:
 # devices: eth0,!wg0
 
 # Enable WireGuard-based transparent encryption for all pod-to-pod traffic.
-encryption:
-  enabled: true
-  type: wireguard
+# Disabled because nodes already communicate over a host-level WireGuard mesh.
+# Enabling this would cause redundant double encryption.
+# encryption:
+#   enabled: true
+#   type: wireguard
 
-# Prevent Pod CIDR from overlapping with WireGuard's 10.0.0.0/24 (defaults to 10.0.0.0/8).
+# Use Kubernetes IPAM to inherits RKE2's pod CIRD (default 10.42.0.0/16).
+# This prevents Cilium's default IPAM pool (10.0.0.0/8) from conflicting
+# with 10.0.0.0/24 used by the WireGuard mesh.
 ipam:
-  operator:
-    clusterPoolIPv4PodCIDRList: ["{{ rke2_cluster_cidr | default('10.42.0.0/16') }}"]
+  mode: kubernetes
+  # Only required if ipam.mode is set to "cluster-pool":
+  # operator:
+  #   clusterPoolIPv4PodCIDRList: ["{{ rke2_cluster_cidr | default('10.42.0.0/16') }}"]
