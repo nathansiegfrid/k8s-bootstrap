@@ -7,6 +7,25 @@
     ansible_user: "{{ ssh_user }}"
 
   tasks:
+    - name: Confirm Flux deployment
+      ansible.builtin.pause:
+        prompt: >-
+          WARNING: This will deploy Flux Operator version '{{ flux_operator_version }}'
+          and Flux Instance version '{{ flux_instance_version }}'.
+          Type 'deploy' to proceed
+      register: confirmation
+      run_once: true
+      when: not ansible_check_mode
+
+    - name: Assert user confirmation
+      ansible.builtin.assert:
+        that:
+          - confirmation.user_input == "deploy"
+        fail_msg: "Deploy aborted."
+        success_msg: "Deploy confirmed."
+      run_once: true
+      when: not ansible_check_mode
+
     - name: Install Flux Operator via Helm
       ansible.builtin.command:
         cmd: >-
