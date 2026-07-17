@@ -26,6 +26,8 @@
       run_once: true
       when: not ansible_check_mode
 
+    # Multi-tenancy example:
+    # https://github.com/fluxcd/flux2-multi-tenancy#flux-operator-bootstrap
     - name: Install Flux Operator via Helm
       ansible.builtin.command:
         cmd: >-
@@ -34,10 +36,9 @@
           --version {{ flux_operator_version }}
           --namespace flux-system
           --create-namespace
+          --set multitenancy.enabled=true
           --wait
           --timeout 5m
-          --set multitenancy.enabled=true
-          --set multitenancy.defaultServiceAccount=flux-operator
       when: not ansible_check_mode
 
     - name: Collect GitHub known_hosts entry

@@ -1,7 +1,11 @@
 # Deployed by Ansible.
 # Do not edit manually, changes will be overwritten.
 #
-# https://github.com/controlplaneio-fluxcd/flux-operator
+# Docs:
+# https://fluxoperator.dev/docs/crd/fluxinstance/
+#
+# Multi-tenancy example:
+# https://github.com/fluxcd/flux2-multi-tenancy#flux-operator-bootstrap
 
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
@@ -13,6 +17,8 @@ spec:
     version: "{{ flux_instance_version }}"
     registry: ghcr.io/fluxcd
   cluster:
+    type: kubernetes
+    size: medium
     multitenant: true
     tenantDefaultServiceAccount: flux
   sync:
