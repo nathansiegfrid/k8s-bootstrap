@@ -63,5 +63,9 @@
 
     - name: Restart SSH
       ansible.builtin.systemd_service:
-        name: ssh
+        name: "{{ item }}"
         state: restarted
+      failed_when: false
+      loop:
+        - ssh # Debian
+        - ssh.socket # Ubuntu
