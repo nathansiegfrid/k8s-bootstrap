@@ -79,7 +79,6 @@
       ansible.builtin.copy:
         content: |
           br_netfilter
-          ip6table_filter
           iptable_filter
           iptable_mangle
           iptable_nat
