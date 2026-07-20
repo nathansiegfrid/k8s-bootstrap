@@ -46,6 +46,15 @@
         mode: "0600"
       notify: Restart SSH
 
+    # Fix warning when starting SSH from macOS terminals.
+    # -bash: warning: setlocale: LC_CTYPE: cannot change locale (UTF-8): No such file or directory
+    - name: Disable AcceptEnv in main sshd_config
+      ansible.builtin.replace:
+        path: /etc/ssh/sshd_config
+        regexp: '^(AcceptEnv\s+.*)$'
+        replace: '#\1'
+      notify: Restart SSH
+
   handlers:
     - name: Restart Fail2Ban
       ansible.builtin.systemd_service:
