@@ -165,7 +165,7 @@
     - name: Generate client configs
       ansible.builtin.template:
         src: wireguard-client.conf.j2
-        dest: "./generate/{{ item.name }}.conf"
+        dest: "./generate/{{ item.name }} - {{ now(fmt='%Y%m%d') }}.conf"
         mode: "0600"
       delegate_to: localhost
       become: false
